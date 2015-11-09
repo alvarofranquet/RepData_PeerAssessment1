@@ -31,9 +31,7 @@ ggplot(md, aes(steps)) +
   geom_histogram(fill = 'deepskyblue', colour = 'black') + 
   theme_bw() +
   ggtitle('Steps histogram')
-```
 
-```{r, echo=TRUE}
 mean(md$steps, na.rm = T)
 median(md$steps, na.rm = T)
 ```
@@ -58,8 +56,6 @@ The 5-minute interval which contains the maximum number of steps is: `r md.auxil
 
 The total number of missing values in the dataset is: `r sum(is.na(md))` 
 
-## 3.2 Devise a strategy for filling in all of the missing values in the dataset. The strategy does not need to be sophisticated. For example, you could use the mean/median for that day, or the mean for that 5-minute interval, etc.
-
 ```{r, echo=TRUE}
 md.auxiliar <- md %>% group_by(interval) %>% summarise(steps = round(mean(steps, na.rm = T)))
 
@@ -67,13 +63,8 @@ md.complete <- md[complete.cases(md),]
 md.uncomplete <- md[!complete.cases(md),] %>% select(-steps)
 md.uncomplete <- left_join(md.uncomplete, md.auxiliar)
 
-```
-
-```{r, echo=TRUE}
 md.filled <- bind_rows(md.complete, md.uncomplete) %>% arrange(interval)
-```
 
-```{r, echo=TRUE}
 md.auxiliar_2 <- md.filled %>% group_by(date) %>% summarise(N = sum(steps))
 
 ggplot(md.auxiliar_2, aes(x = N)) + 
@@ -84,6 +75,10 @@ theme_bw()
 mean(md.auxiliar_2$N)
 median(md.auxiliar_2$N)
 ```
+
+### What is the impact of imputing missing data on the estimates of the total daily number of steps?
+
+
 
 ## 4. Are there differences in activity patterns between weekdays and weekends?
 
