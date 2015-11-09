@@ -1,25 +1,139 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "Reproducible research course project 1"
+author: "Álvaro Franquet"
+date: "9 de noviembre de 2015"
+output: html_document
 ---
 
 
-## Loading and preprocessing the data
+```{r, echo=TRUE}
+# Reproducible research
+# Course project 1
 
 
 
-## What is mean total number of steps taken per day?
+# 0. Load packages
+
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(lubridate)
+library(class)
+
+md <- read.csv('activity.csv') %>% mutate(date = ymd(date)) %>% arrange(interval)
+```
+
+
+# 1. What is mean total number of steps taken per day?
+
+## 1.1.Make a histogram of the total number of steps taken each day
+
+```{r, echo=TRUE}
+ggplot(md, aes(steps)) + 
+  geom_histogram(fill = 'deepskyblue', colour = 'black') + 
+  theme_bw() +
+  ggtitle('Steps histogram')
+```
+
+## 1.2.Calculate and report the mean and median total number of steps taken per day
+
+```{r, echo=TRUE}
+mean(md$steps, na.rm = T)
+median(md$steps, na.rm = T)
+```
+
+
+# 2.What is the average daily activity pattern?
+
+## 2.1 Make a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)
+
+```{r, echo=TRUE}
+
+md.auxiliar <- md %>% group_by(interval) %>% summarise(avg.steps = mean(steps, na.rm = T))
+
+ggplot(md.auxiliar, aes(interval, avg.steps)) + 
+geom_line() +
+theme_bw() +
+ggtitle('Average steps by interval')
+
+```
+
+## 2.2 Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+
+The 5-minute interval which contains the maximum number of steps is: `r md.auxiliar$interval[which.max(md.auxiliar$avg.steps)]`
+
+# 3. Imputing missing values
+
+## 3.1 Calculate and report the total number of missing values in the dataset (i.e. the total number of rows with NAs)
+
+The total number of missing values in the dataset is: `r sum(is.na(md))` 
+
+## 3.2 Devise a strategy for filling in all of the missing values in the dataset. The strategy does not need to be sophisticated. For example, you could use the mean/median for that day, or the mean for that 5-minute interval, etc.
+
+```{r, echo=TRUE}
+md.auxiliar <- md %>% group_by(interval) %>% summarise(steps = round(mean(steps, na.rm = T)))
+
+md.complete <- md[complete.cases(md),]
+md.uncomplete <- md[!complete.cases(md),] %>% select(-steps)
+md.uncomplete <- left_join(md.uncomplete, md.auxiliar)
+
+```
+
+## 3.3 Create a new dataset that is equal to the original dataset but with the missing data filled in.
+
+```{r, echo=TRUE}
+md.filled <- bind_rows(md.complete, md.uncomplete) %>% arrange(interval)
+```
+
+
+## 3.4 Make a histogram of the total number of steps taken each day and Calculate and report the mean and median total number of steps taken per day. 
+
+### Do these values differ from the estimates from the first part of the assignment? 
+```{r, echo=TRUE}
+md.auxiliar_2 <- md.filled %>% group_by(date) %>% summarise(N = sum(steps))
+
+ggplot(md.auxiliar_2, aes(x = N)) + 
+geom_histogram(fill = 'deepskyblue', colour = 'black') + 
+ggtitle('Histogram of the total number of steps taken each day')+
+theme_bw()
+
+mean(md.auxiliar_2$N)
+median(md.auxiliar_2$N)
+```
+
+### What is the impact of imputing missing data on the estimates of the total daily number of steps?
 
 
 
-## What is the average daily activity pattern?
+## 4. Are there differences in activity patterns between weekdays and weekends?
 
+### 4.1. Create a new factor variable in the dataset with two levels – “weekday” and “weekend” indicating whether a given date is a weekday or weekend day.
 
+```{r, echo=TRUE}
 
-## Imputing missing values
+md.filled <- md.filled %>% mutate(wd = weekdays(date)) 
 
+# passing from spanish weekdays names to english
 
+weekend <- function(x){
+  res <- rep('weekday', length(x))
+  res[which(x %in% c('Saturday', 'Sunday'))] = 'weekend'
+  res <- as.factor(res)
+  return(res)
+}
 
-## Are there differences in activity patterns between weekdays and weekends?
+md.filled$wd <- factor(md.filled$wd, levels = c('lunes', 'martes', 'miércoles','jueves','viernes','sábado','domingo'), labels = c('Monday','Tuesday', 'Wednesday','Thursday','Friday', 'Saturday', 'Sunday'))
+```
+
+### 4.2 Make a panel plot containing a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis). See the README file in the GitHub repository to see an example of what this plot should look like using simulated data.
+
+```{r, echo=TRUE}
+md.filled$wd <- weekend(md.filled$wd)
+md.auxiliar_3 <- md.filled %>% group_by(interval, wd) %>% summarise(avg.steps = mean(steps))
+
+ggplot(md.auxiliar_3, aes(x = interval, y = avg.steps)) +
+geom_line() + 
+facet_wrap(~wd) +
+theme_bw()
+```
+
